@@ -8,9 +8,8 @@ These are foundational utilities used across internal scripts, plugins, and comm
 ## 📦 Modules
 
 - `StringUtils.lua` — string parsing and sanitization  
-- `PlayersManager.lua` — player filtering and targeting  
-- `CommandManager.lua` — base command management and registration  
-- `GameUtils.lua` — Roblox-specific utilities
+- `PlayersManager.lua` — player filtering and targeting
+- `Dragger.lua` — Roblox UI element dragger
 
 ---
 
