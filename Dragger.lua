@@ -12,10 +12,6 @@ function Dragger:Do(...)
     end
 
     local function clampToBounds(pos, size, boundary)
-        assert(typeof(pos) == "UDim2", "Expected UDim2 for pos")
-        assert(typeof(size) == "Vector2", "Expected Vector2 for size")
-        assert(typeof(boundary) == "Vector2", "Expected Vector2 for boundary")
-
         local x = math.clamp(pos.X.Offset, 0, boundary.X - size.X)
         local y = math.clamp(pos.Y.Offset, 0, boundary.Y - size.Y)
 
