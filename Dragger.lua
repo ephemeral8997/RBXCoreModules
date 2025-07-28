@@ -13,8 +13,8 @@ function Dragger:Do(...)
 
     local function clampToBounds(pos, size, boundary)
         return UDim2.new(
-            0, math.clamp(pos.X, 0, boundary.X - size.X),
-            0, math.clamp(pos.Y, 0, boundary.Y - size.Y)
+            0, math.clamp(pos.X.Offset, 0, boundary.X - size.X),
+            0, math.clamp(pos.Y.Offset, 0, boundary.Y - size.Y)
         )
     end
 
