@@ -11,19 +11,25 @@ function Dragger:Do(...)
         dragStart, currentInput, moved, activeFrame = nil
     end
 
-    for _, frame in ipairs(frames) do -- ✅ Fix 1: ipairs
+    local function clampToBounds(pos, size, boundary)
+        return UDim2.new(
+            0, math.clamp(pos.X.Offset, 0, boundary.X - size.X.Offset),
+            0, math.clamp(pos.Y.Offset, 0, boundary.Y - size.Y.Offset)
+        )
+    end
+
+    for _, frame in ipairs(frames) do
         frame.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragStart, currentInput, moved, activeFrame = input.Position, input, false, frame
                 startPositions = {}
-                for _, f in ipairs(frames) do -- ✅ Fix 1 repeated
+                for _, f in ipairs(frames) do
                     startPositions[f] = f.Position
                 end
 
                 local oldCam = Camera.CameraType
                 Camera.CameraType = Enum.CameraType.Scriptable
 
-                -- ✅ Fix 2: add fallback to InputEnded
                 local endedConn
                 endedConn = Services.UserInputService.InputEnded:Connect(function(endInput)
                     if endInput == input then
@@ -35,7 +41,7 @@ function Dragger:Do(...)
                         end
                         Camera.CameraType = oldCam
                         reset()
-                        endedConn:Disconnect() -- cleanup
+                        endedConn:Disconnect()
                     end
                 end)
             end
@@ -48,10 +54,12 @@ function Dragger:Do(...)
             if not moved and delta.Magnitude > MIN_DIST then
                 moved, self.IsDragging = true, true
             end
-            if self.IsDragging then
+            if self.IsDragging and activeFrame then
+                local screenSize = activeFrame.Parent.AbsoluteSize
                 for _, f in ipairs(frames) do
                     local start = startPositions[f]
-                    f.Position = start + UDim2.new(0, delta.X, 0, delta.Y)
+                    local desiredPos = start + UDim2.new(0, delta.X, 0, delta.Y)
+                    f.Position = clampToBounds(desiredPos, f.AbsoluteSize, screenSize)
                 end
             end
         end
