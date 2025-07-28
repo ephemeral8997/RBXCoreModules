@@ -1,30 +1,30 @@
 local Dragger = {}
 Dragger.IsDragging = false
 
-function Dragger:Do(...)
-    local frames = { ... }
-    local dragStart, currentInput, startPositions, moved, activeFrame
+function Dragger:Do(sources, targets)
+    local dragStart, currentInput, startPositions, moved
     local MIN_DIST = 12
 
     local function reset()
         self.IsDragging = false
-        dragStart, currentInput, moved, activeFrame = nil
+        dragStart, currentInput, moved = nil
     end
 
     local function clampToBounds(pos, size, boundary)
         local x = math.clamp(pos.X.Offset, 0, boundary.X - size.X)
         local y = math.clamp(pos.Y.Offset, 0, boundary.Y - size.Y)
-
         return UDim2.new(0, x, 0, y)
     end
 
-    for _, frame in ipairs(frames) do
-        frame.InputBegan:Connect(function(input)
+    for _, source in ipairs(sources) do
+        source.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragStart, currentInput, moved, activeFrame = input.Position, input, false, frame
+                dragStart = input.Position
+                currentInput = input
+                moved = false
                 startPositions = {}
-                for _, f in ipairs(frames) do
-                    startPositions[f] = f.Position
+                for _, t in ipairs(targets) do
+                    startPositions[t] = t.Position
                 end
 
                 local oldCam = Camera.CameraType
@@ -33,10 +33,10 @@ function Dragger:Do(...)
                 local endedConn
                 endedConn = Services.UserInputService.InputEnded:Connect(function(endInput)
                     if endInput == input then
-                        if moved and activeFrame then
-                            local pos = activeFrame.Position
-                            for _, f in ipairs(frames) do
-                                f.Position = pos
+                        if moved then
+                            local final = targets[1].Position
+                            for _, t in ipairs(targets) do
+                                t.Position = final
                             end
                         end
                         Camera.CameraType = oldCam
@@ -54,12 +54,12 @@ function Dragger:Do(...)
             if not moved and delta.Magnitude > MIN_DIST then
                 moved, self.IsDragging = true, true
             end
-            if self.IsDragging and activeFrame then
-                local screenSize = activeFrame.Parent.AbsoluteSize
-                for _, f in ipairs(frames) do
-                    local start = startPositions[f]
+            if self.IsDragging then
+                local screenSize = targets[1].Parent.AbsoluteSize
+                for _, t in ipairs(targets) do
+                    local start = startPositions[t]
                     local desiredPos = start + UDim2.new(0, delta.X, 0, delta.Y)
-                    f.Position = clampToBounds(desiredPos, f.AbsoluteSize, screenSize)
+                    t.Position = clampToBounds(desiredPos, t.AbsoluteSize, screenSize)
                 end
             end
         end
