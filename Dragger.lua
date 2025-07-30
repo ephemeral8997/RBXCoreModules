@@ -2,102 +2,95 @@ local Dragger = {}
 Dragger.IsDragging = false
 
 function Dragger:Do(sources, targets)
-    local dragStart, currentInput, startPositions, moved
-    local MIN_DIST = 12
+	local dragStart, currentInput, startPositions, moved
+	local MIN_DIST = 12
 
-    local function reset()
-        self.IsDragging = false
-        dragStart, currentInput, moved = nil
-    end
+	local function reset()
+		self.IsDragging = false
+		dragStart, currentInput, moved = nil
+	end
 
-    local function clampToBounds(pos, size, boundary, anchor)
-        local absoluteX = pos.X.Offset - (anchor.X * size.X)
-        local absoluteY = pos.Y.Offset - (anchor.Y * size.Y)
-        local clampedX = math.clamp(absoluteX, 0, boundary.X - size.X)
-        local clampedY = math.clamp(absoluteY, 0, boundary.Y - size.Y)
-        return UDim2.new(0, clampedX + (anchor.X * size.X), 0, clampedY + (anchor.Y * size.Y))
-    end
+	local function clampToBounds(pos, size, boundary, anchor)
+		local absoluteX = pos.X.Offset - (anchor.X * size.X)
+		local absoluteY = pos.Y.Offset - (anchor.Y * size.Y)
+		local clampedX = math.clamp(absoluteX, 0, boundary.X - size.X)
+		local clampedY = math.clamp(absoluteY, 0, boundary.Y - size.Y)
+		return UDim2.new(0, clampedX + (anchor.X * size.X), 0, clampedY + (anchor.Y * size.Y))
+	end
 
-    for _, source in ipairs(sources) do
-        source.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                for _, t in ipairs(targets) do
-                    if t.AbsolutePosition == Vector2.zero then
-                        t:GetPropertyChangedSignal("AbsolutePosition"):Wait()
-                    end
-                end
+	for _, source in ipairs(sources) do
+		source.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				for _, t in ipairs(targets) do
+					if t.AbsolutePosition == Vector2.zero then
+						t:GetPropertyChangedSignal("AbsolutePosition"):Wait()
+					end
+				end
 
-                startPositions = {}
-                local dragOffsets = {}
+				startPositions = {}
+				local dragOffsets = {}
+				local inputPos = Vector2.new(input.Position.X, input.Position.Y)
 
-                local inputPos = Vector2.new(input.Position.X, input.Position.Y)
+				for _, t in ipairs(targets) do
+					startPositions[t] = t.Position
+					dragOffsets[t] = inputPos - t.AbsolutePosition
+				end
 
-                for _, t in ipairs(targets) do
-                    startPositions[t] = t.Position
-                    dragOffsets[t] = inputPos - t.AbsolutePosition
-                end
+				dragStart = inputPos
+				currentInput = input
+				moved = false
 
-                dragStart = inputPos
-                currentInput = input
-                moved = false
+				local oldCam = workspace.CurrentCamera.CameraType
+				workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
 
-                local oldCam = workspace.CurrentCamera.CameraType
-                workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
+				local endedConn, movedConn
 
-                local endedConn
-                endedConn = game:GetService("UserInputService").InputEnded:Connect(function(endInput)
-                    if endInput == input then
-                        if moved then
-                            local finalPos = targets[1].Position
-                            for _, t in ipairs(targets) do
-                                t.Position = finalPos
-                            end
-                        end
-                        workspace.CurrentCamera.CameraType = oldCam
-                        reset()
-                        endedConn:Disconnect()
-                    end
-                end)
+				endedConn = Services.UserInputService.InputEnded:Connect(function(endInput)
+					if endInput == input then
+						if moved then
+							local finalPos = targets[1].Position
+							for _, t in ipairs(targets) do
+								t.Position = finalPos
+							end
+						end
+						workspace.CurrentCamera.CameraType = oldCam
+						reset()
+						if movedConn then movedConn:Disconnect() end
+						endedConn:Disconnect()
+					end
+				end)
 
-                local movedConn
-                movedConn = game:GetService("UserInputService").InputChanged:Connect(function(moveInput)
-                    if moveInput == currentInput and dragStart then
-                        local currentPos = Vector2.new(moveInput.Position.X, moveInput.Position.Y)
-                        local delta = currentPos - dragStart
-                        if not moved and delta.Magnitude > MIN_DIST then
-                            moved, self.IsDragging = true, true
-                        end
-                        if self.IsDragging then
-                            local screenSize = targets[1].Parent.AbsoluteSize
-                            for _, t in ipairs(targets) do
-                                local offset = dragOffsets[t]
-                                local desiredAbsPos = currentPos - offset
-                                local parentPos = t.Parent.AbsolutePosition
-                                local anchor = t.AnchorPoint
-                                local size = t.AbsoluteSize
-                                local relX = desiredAbsPos.X - parentPos.X + (anchor.X * size.X)
-                                local relY = desiredAbsPos.Y - parentPos.Y + (anchor.Y * size.Y)
+				movedConn = Services.UserInputService.InputChanged:Connect(function(moveInput)
+					if moveInput == currentInput and dragStart then
+						local currentPos = Vector2.new(moveInput.Position.X, moveInput.Position.Y)
+						local delta = currentPos - dragStart
+						if not moved and delta.Magnitude > MIN_DIST then
+							moved, self.IsDragging = true, true
+						end
+						if self.IsDragging then
+							local screenSize = targets[1].Parent.AbsoluteSize
+							for _, t in ipairs(targets) do
+								local offset = dragOffsets[t]
+								local desiredAbsPos = currentPos - offset
+								local parentPos = t.Parent.AbsolutePosition
+								local anchor = t.AnchorPoint
+								local size = t.AbsoluteSize
+								local relX = desiredAbsPos.X - parentPos.X + (anchor.X * size.X)
+								local relY = desiredAbsPos.Y - parentPos.Y + (anchor.Y * size.Y)
 
-                                local desiredPos = clampToBounds(
-                                    UDim2.new(0, relX, 0, relY),
-                                    size,
-                                    screenSize,
-                                    anchor
-                                )
-                                t.Position = desiredPos
-                            end
-                        end
-                    end
-                end)
-
-                endedConn:Connect(function()
-                    if movedConn then
-                        movedConn:Disconnect()
-                    end
-                end)
-            end
-        end)
-    end
+								t.Position = clampToBounds(
+									UDim2.new(0, relX, 0, relY),
+									size,
+									screenSize,
+									anchor
+								)
+							end
+						end
+					end
+				end)
+			end
+		end)
+	end
 end
 
 return Dragger
