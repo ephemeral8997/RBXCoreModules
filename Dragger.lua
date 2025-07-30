@@ -13,10 +13,8 @@ function Dragger:Do(sources, targets)
     local function clampToBounds(pos, size, boundary, anchor)
         local absoluteX = pos.X.Offset - (anchor.X * size.X)
         local absoluteY = pos.Y.Offset - (anchor.Y * size.Y)
-
         local clampedX = math.clamp(absoluteX, 0, boundary.X - size.X)
         local clampedY = math.clamp(absoluteY, 0, boundary.Y - size.Y)
-
         return UDim2.new(0, clampedX + (anchor.X * size.X), 0, clampedY + (anchor.Y * size.Y))
     end
 
@@ -24,7 +22,7 @@ function Dragger:Do(sources, targets)
         source.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 for _, t in ipairs(targets) do
-                    if t.AbsolutePosition == Vector2.new(0, 0) then
+                    if t.AbsolutePosition == Vector2.zero then
                         t:GetPropertyChangedSignal("AbsolutePosition"):Wait()
                     end
                 end
@@ -32,13 +30,14 @@ function Dragger:Do(sources, targets)
                 startPositions = {}
                 local dragOffsets = {}
 
+                local inputPos = Vector2.new(input.Position.X, input.Position.Y)
+
                 for _, t in ipairs(targets) do
                     startPositions[t] = t.Position
-                    local absPos = t.AbsolutePosition
-                    dragOffsets[t] = Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(absPos.X, absPos.Y)
+                    dragOffsets[t] = inputPos - t.AbsolutePosition
                 end
 
-                dragStart = Vector2.new(input.Position.X, input.Position.Y)
+                dragStart = inputPos
                 currentInput = input
                 moved = false
 
@@ -73,15 +72,17 @@ function Dragger:Do(sources, targets)
                             for _, t in ipairs(targets) do
                                 local offset = dragOffsets[t]
                                 local desiredAbsPos = currentPos - offset
-                                local parentPos = Vector2.new(t.Parent.AbsolutePosition.X, t.Parent.AbsolutePosition.Y)
-                                local relativeX = desiredAbsPos.X - parentPos.X + (t.AnchorPoint.X * t.AbsoluteSize.X)
-                                local relativeY = desiredAbsPos.Y - parentPos.Y + (t.AnchorPoint.Y * t.AbsoluteSize.Y)
+                                local parentPos = t.Parent.AbsolutePosition
+                                local anchor = t.AnchorPoint
+                                local size = t.AbsoluteSize
+                                local relX = desiredAbsPos.X - parentPos.X + (anchor.X * size.X)
+                                local relY = desiredAbsPos.Y - parentPos.Y + (anchor.Y * size.Y)
 
                                 local desiredPos = clampToBounds(
-                                    UDim2.new(0, relativeX, 0, relativeY),
-                                    t.AbsoluteSize,
+                                    UDim2.new(0, relX, 0, relY),
+                                    size,
                                     screenSize,
-                                    t.AnchorPoint
+                                    anchor
                                 )
                                 t.Position = desiredPos
                             end
