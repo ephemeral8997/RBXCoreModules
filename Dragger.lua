@@ -10,10 +10,14 @@ function Dragger:Do(sources, targets)
         dragStart, currentInput, moved = nil
     end
 
-    local function clampToBounds(pos, size, boundary)
-        local x = math.clamp(pos.X.Offset, 0, boundary.X - size.X)
-        local y = math.clamp(pos.Y.Offset, 0, boundary.Y - size.Y)
-        return UDim2.new(0, x, 0, y)
+    local function clampToBounds(pos, size, boundary, anchor)
+        local absoluteX = pos.X.Offset - (anchor.X * size.X)
+        local absoluteY = pos.Y.Offset - (anchor.Y * size.Y)
+
+        local clampedX = math.clamp(absoluteX, 0, boundary.X - size.X)
+        local clampedY = math.clamp(absoluteY, 0, boundary.Y - size.Y)
+
+        return UDim2.new(0, clampedX + (anchor.X * size.X), 0, clampedY + (anchor.Y * size.Y))
     end
 
     for _, source in ipairs(sources) do
@@ -59,7 +63,7 @@ function Dragger:Do(sources, targets)
                 for _, t in ipairs(targets) do
                     local start = startPositions[t]
                     local desiredPos = start + UDim2.new(0, delta.X, 0, delta.Y)
-                    t.Position = clampToBounds(desiredPos, t.AbsoluteSize, screenSize)
+                    t.Position = clampToBounds(desiredPos, t.AbsoluteSize, screenSize, t.AnchorPoint)
                 end
             end
         end
