@@ -23,7 +23,6 @@ function Dragger:Do(sources, targets)
     for _, source in ipairs(sources) do
         source.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-
                 for _, t in ipairs(targets) do
                     if t.AbsolutePosition == Vector2.new(0, 0) then
                         t:GetPropertyChangedSignal("AbsolutePosition"):Wait()
@@ -36,10 +35,10 @@ function Dragger:Do(sources, targets)
                 for _, t in ipairs(targets) do
                     startPositions[t] = t.Position
                     local absPos = t.AbsolutePosition
-                    dragOffsets[t] = input.Position - absPos
+                    dragOffsets[t] = Vector2.new(input.Position.X, input.Position.Y) - Vector2.new(absPos.X, absPos.Y)
                 end
 
-                dragStart = input.Position
+                dragStart = Vector2.new(input.Position.X, input.Position.Y)
                 currentInput = input
                 moved = false
 
@@ -64,7 +63,8 @@ function Dragger:Do(sources, targets)
                 local movedConn
                 movedConn = game:GetService("UserInputService").InputChanged:Connect(function(moveInput)
                     if moveInput == currentInput and dragStart then
-                        local delta = moveInput.Position - dragStart
+                        local currentPos = Vector2.new(moveInput.Position.X, moveInput.Position.Y)
+                        local delta = currentPos - dragStart
                         if not moved and delta.Magnitude > MIN_DIST then
                             moved, self.IsDragging = true, true
                         end
@@ -72,10 +72,8 @@ function Dragger:Do(sources, targets)
                             local screenSize = targets[1].Parent.AbsoluteSize
                             for _, t in ipairs(targets) do
                                 local offset = dragOffsets[t]
-    
-                                local desiredAbsPos = moveInput.Position - offset
-    
-                                local parentPos = t.Parent.AbsolutePosition
+                                local desiredAbsPos = currentPos - offset
+                                local parentPos = Vector2.new(t.Parent.AbsolutePosition.X, t.Parent.AbsolutePosition.Y)
                                 local relativeX = desiredAbsPos.X - parentPos.X + (t.AnchorPoint.X * t.AbsoluteSize.X)
                                 local relativeY = desiredAbsPos.Y - parentPos.Y + (t.AnchorPoint.Y * t.AbsoluteSize.Y)
 
@@ -91,7 +89,6 @@ function Dragger:Do(sources, targets)
                     end
                 end)
 
-                        
                 endedConn:Connect(function()
                     if movedConn then
                         movedConn:Disconnect()
